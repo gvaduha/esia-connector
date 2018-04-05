@@ -3,6 +3,7 @@ import json
 import os
 import datetime
 import tempfile
+import urllib.parse
 
 import pytz
 import requests
@@ -31,7 +32,7 @@ def make_request(url, method='GET', headers=None, data=None):
         raise IncorrectJsonError(e)
 
 
-def sign_params(params, certificate_file, private_key_file):
+def sign_params(params, certificate_file, private_key_file, externalsign):
     """
     Signs params adding client_secret key, containing signature based on `scope`, `timestamp`, `client_id` and `state`
     keys values.
@@ -52,23 +53,45 @@ def sign_params(params, certificate_file, private_key_file):
     destination_file.close()
     destination_path = destination_file.name
 
-    cmd = 'openssl smime -sign -md sha256 -in {f_in} -signer {cert} -inkey {key} -out {f_out} -outform DER'
+    if externalsign:
+        cmd = 'wget https://hypervisor/openidc/ru/e1ciblc/esiasign?provider=esia\&tosign={p_text} -O {f_out}'
+    else:
+        cmd = 'openssl smime -sign -md sha256 -passin pass:123456 -in {f_in} -signer {cert} -inkey {key} -out {f_out} -outform DER'
+    
     # You can verify this signature using:
     # openssl smime -verify -inform DER -in out.msg -content msg.txt -noverify \
     # -certfile ../key/septem_sp_saprun_com.crt
 
-    os.system(cmd.format(
-        f_in=source_path,
-        cert=certificate_file,
-        key=private_key_file,
-        f_out=destination_path,
-    ))
+    if externalsign:
+        cmdfmt = cmd.format(
+            p_text=urllib.parse.quote(plaintext),
+            f_out=destination_path,
+        )
+    else:
+        cmdfmt = cmd.format(
+            f_in=source_path,
+            cert=certificate_file,
+            key=private_key_file,
+            f_out=destination_path,
+        )
+ 
+    print('-----------------------------------')
+    print(cmdfmt)
+
+    os.system(cmdfmt)
 
     raw_client_secret = open(destination_path, 'rb').read()
 
+    if externalsign:
+        secret = raw_client_secret.decode("utf-8")[5:].replace('\r','').replace('\n','')
+    else:
+        secret = base64.urlsafe_b64encode(raw_client_secret).decode('utf-8'),
+
+    print(secret)
     params.update(
-        client_secret=base64.urlsafe_b64encode(raw_client_secret).decode('utf-8'),
+        client_secret=secret,
     )
+    print('-----------------------------------')
 
     os.unlink(source_path)
     os.unlink(destination_path)

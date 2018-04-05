@@ -44,7 +44,7 @@ class EsiaAuth:
         """
         self.settings = settings
 
-    def get_auth_url(self, state=None, redirect_uri=None):
+    def get_auth_url(self, state=None, redirect_uri=None, externalsign=False):
         """
         Return url which end-user should visit to authorize at ESIA.
         :param str or None state: identifier, will be returned as GET parameter in redirected request after auth.
@@ -64,7 +64,9 @@ class EsiaAuth:
         }
         params = sign_params(params,
                              certificate_file=self.settings.certificate_file,
-                             private_key_file=self.settings.private_key_file)
+                             private_key_file=self.settings.private_key_file,
+                             externalsign=externalsign
+                             )
 
         params = urlencode(sorted(params.items()))  # sorted needed to make uri deterministic for tests.
 
@@ -72,7 +74,7 @@ class EsiaAuth:
                                                       auth_url=self._AUTHORIZATION_URL,
                                                       params=params)
 
-    def complete_authorization(self, code, state, validate_token=True, redirect_uri=None):
+    def complete_authorization(self, code, state, validate_token=True, redirect_uri=None, externalsign=False):
         """
         Exchanges received code and state to access token, validates token (optionally), extracts ESIA user id from
         token and returns ESIAInformationConnector instance.
@@ -98,7 +100,9 @@ class EsiaAuth:
 
         params = sign_params(params,
                              certificate_file=self.settings.certificate_file,
-                             private_key_file=self.settings.private_key_file)
+                             private_key_file=self.settings.private_key_file,
+                             externalsign=externalsign
+                             )
 
         url = '{base_url}{token_url}'.format(base_url=self.settings.esia_service_url,
                                              token_url=self._TOKEN_EXCHANGE_URL)
