@@ -56,7 +56,7 @@ def sign_params(params, certificate_file, private_key_file, externalsign):
     if externalsign:
         cmd = 'wget https://hypervisor/openidc/ru/e1ciblc/esiasign?provider=esia\&tosign={p_text} -O {f_out}'
     else:
-        cmd = 'openssl smime -sign -md sha256 -passin pass:123456 -in {f_in} -signer {cert} -inkey {key} -out {f_out} -outform DER'
+        cmd = 'openssl smime -sign -nosmimecap -md sha256 -passin pass:123456 -in {f_in} -signer {cert} -inkey {key} -out {f_out} -outform DER'
     
     # You can verify this signature using:
     # openssl smime -verify -inform DER -in out.msg -content msg.txt -noverify \
